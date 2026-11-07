@@ -6,12 +6,12 @@ A deterministic, minifier-agnostic PowerShell utility that strips **~1,560 token
 
 ## 1. Problems Solved
 
-Even with provider-native tool calling enabled, Roo Code unconditionally injects ~1,800 tokens of static boilerplate into **every mode and every subtask** before a single project file is read[cite: 24]:
+Even with provider-native tool calling enabled, Roo Code unconditionally injects ~1,800 tokens of static boilerplate into **every mode and every subtask** before a single project file is read:
 
-1. **Duplicate 120-Word Paragraph & Hardcoded `'/test/path'` Bug:** Both `CAPABILITIES` (`src/core/prompts/sections/capabilities.ts`) and `SYSTEM INFORMATION` (`src/core/prompts/sections/system-info.ts`) inject the exact same 120-word essay explaining `environment_details` and `list_files`—with `SYSTEM INFORMATION` containing a hardcoded `('/test/path')` string literal[cite: 22, 24].
-2. **Contradictory Tool-Calling Directives:** While `TOOL USE` instructs the model to *"Prefer calling as many tools as are reasonably needed in a single response"*, the legacy `RULES` and `OBJECTIVE` sections instruct the model to *"utilize available tools one at a time"* and *"wait for the user's response after each tool use"*[cite: 22, 24].
-3. **Redundant Capability & Objective Lectures:** When native tool calling is active, tool schemas and parameter requirements are already passed via the API's `tools` JSON header, making the 600-word `CAPABILITIES`, `Tool Use Guidelines`, and `OBJECTIVE` prose blocks pure token bloat that dilutes model attention on custom mode instructions[cite: 22, 24].
-4. **Hardcoded Architect `.md`-Only Lockout:** Built-in `architect` mode restricts edits to `\.md$`, throwing `FileRestrictionError` when initializing `.txt` continuity files (`llms-dev.txt`) or build/git ignore files (`.gitignore`, `.eleventyignore`, `.npmignore`)[cite: 10, 24].
+1. **Duplicate 120-Word Paragraph & Hardcoded `'/test/path'` Bug:** Both `CAPABILITIES` (`src/core/prompts/sections/capabilities.ts`) and `SYSTEM INFORMATION` (`src/core/prompts/sections/system-info.ts`) inject the exact same 120-word essay explaining `environment_details` and `list_files`—with `SYSTEM INFORMATION` containing a hardcoded `('/test/path')` string literal.
+2. **Contradictory Tool-Calling Directives:** While `TOOL USE` instructs the model to *"Prefer calling as many tools as are reasonably needed in a single response"*, the legacy `RULES` and `OBJECTIVE` sections instruct the model to *"utilize available tools one at a time"* and *"wait for the user's response after each tool use"*.
+3. **Redundant Capability & Objective Lectures:** When native tool calling is active, tool schemas and parameter requirements are already passed via the API's `tools` JSON header, making the 600-word `CAPABILITIES`, `Tool Use Guidelines`, and `OBJECTIVE` prose blocks pure token bloat that dilutes model attention on custom mode instructions.
+4. **Hardcoded Architect `.md`-Only Lockout:** Built-in `architect` mode restricts edits to `\.md$`, throwing `FileRestrictionError` when initializing `.txt` continuity files (`llms-dev.txt`) or build/git ignore files (`.gitignore`, `.eleventyignore`, `.npmignore`).
 5. **Turn-1 `API Request...` Hang (`Error: Could not find ripgrep binary`):** Modern VS Code Windows User Installer builds nest `resources\app` inside versioned commit-hash subdirectories (`%LOCALAPPDATA%\Programs\Microsoft VS Code\<commit-hash>\resources\app`) where `node_modules\@vscode\ripgrep\bin\rg.exe` can be absent, causing Roo Code's file indexer (`_4a`) to throw an unhandled exception before Turn 1 is dispatched.
 
 ---
@@ -32,7 +32,7 @@ Even with provider-native tool calling enabled, Roo Code unconditionally injects
 
 ## 3. Architecture & Minifier-Agnostic Content Anchoring
 
-Instead of relying on fragile minified function names (such as `kHt`, `LHt`, or `oHt`) that change whenever `esbuild` recompiles a new Roo Code release, `patch-roocode.ps1` uses **content-anchored regular expressions** that match the unique template headers and closing interpolations inside `dist/extension.js`, dynamically capture the current build's minified identifier names (`(?<fn>[A-Za-z0-9_$]+)`), and rewrite only the target function bodies in-place without disturbing adjacent bundled modules (such as the 14.5 KB inlined `execa` process runner between `RULES` and `SYSTEM INFORMATION`)[cite: 23, 24].
+Instead of relying on fragile minified function names (such as `kHt`, `LHt`, or `oHt`) that change whenever `esbuild` recompiles a new Roo Code release, `patch-roocode.ps1` uses **content-anchored regular expressions** that match the unique template headers and closing interpolations inside `dist/extension.js`, dynamically capture the current build's minified identifier names (`(?<fn>[A-Za-z0-9_$]+)`), and rewrite only the target function bodies in-place without disturbing adjacent bundled modules (such as the 14.5 KB inlined `execa` process runner between `RULES` and `SYSTEM INFORMATION`).
 
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 30, 'rankSpacing': 45, 'curve': 'basis'}}}%%
@@ -53,12 +53,12 @@ flowchart LR
 ## 4. Usage
 
 ### Apply the Patch & Heal Ripgrep
-Run in PowerShell (automatically locates the latest installed Roo Code extension across VS Code, VS Code Insiders, and Cursor)[cite: 24, 25]:
+Run in PowerShell (automatically locates the latest installed Roo Code extension across VS Code, VS Code Insiders, and Cursor):
 
 ```powershell
 .\patch-roocode.ps1
 ```
-Then press `Ctrl+Shift+P` $\rightarrow$ **`Developer: Reload Window`** in VS Code. Click **Preview System Prompt** in the Roo Code Prompts tab to verify[cite: 24].
+Then press `Ctrl+Shift+P` -> **`Developer: Reload Window`** in VS Code. Click **Preview System Prompt** in the Roo Code Prompts tab to verify.
 
 ### Optional Flags
 * **Keep Built-In Architect Locked to `.md` Only:**
