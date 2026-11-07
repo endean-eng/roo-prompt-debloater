@@ -1,0 +1,30 @@
+# PROJECT: Roo Code System Prompt Debloater (roo-prompt-debloater)
+# LAST_SYNC: 2026-11-07 | MODE: docs-maintainer
+
+## 1. SYSTEM TOPOLOGY & RUNTIME
+- Stack: PowerShell 5.1 / 7+ (`patch-roocode.ps1`) targeting Roo Code VS Code Extension (`rooveterinaryinc.roo-cline` compiled `dist/extension.js` bundle)
+- Entry Points: `patch-roocode.ps1` (CLI flags: `-Restore`, `-SkipArchitectRegex`, `-SkipRipgrepFix`, `-ExtensionPath <string>`)
+- External Bindings: Operates on local `%USERPROFILE%\.vscode\extensions\rooveterinaryinc.roo-cline-*\dist\extension.js` (plus `.vscode-insiders` and `.cursor`) and `%LOCALAPPDATA%\Programs\Microsoft VS Code\*\resources\app` (`rg.exe` provisioning)
+
+## 2. FILE RESPONSIBILITY MAP
+- `patch-roocode.ps1`: Auto-provisions `rg.exe` into VS Code `resources/app` ripgrep directories, creates an idempotent `.bak` backup of `dist/extension.js`, applies minifier-agnostic content-anchored regexes to strip static prompt bloat (~1,560 tokens), and writes UTF-8 No-BOM output.
+- `README.md`: Human-facing documentation, token benchmarks, Mermaid architecture flow, and CLI usage guide.
+- `llms-dev.txt`: Internal AI continuity specification governing regex boundary invariants, UTF-8 No-BOM file I/O, and bundle safety constraints.
+
+## 3. DATA CONTRACTS & STATE INVARIANTS
+- Backup Idempotency Contract: `patch-roocode.ps1` NEVER patches an already-patched `dist/extension.js` blindly. If `dist/extension.js.bak` does not exist, it copies `dist/extension.js` to `dist/extension.js.bak` first; on all subsequent runs, it reads fresh UTF-8 bytes from `dist/extension.js.bak` before applying regexes and writing to `dist/extension.js`.
+- Minifier-Agnostic Regex Contract: Every replacement regex MUST dynamically capture the minified function identifier (`function (?<fn>[A-Za-z0-9_$]+)\((?<args>[^)]*)\)`) anchored by immutable section headers (`# Tool Use Guidelines`, `====\s+CAPABILITIES`, `====\s+OBJECTIVE`, `====\s+SYSTEM INFORMATION`, `====\s+RULES`) and exact function-closing interpolations so the script survives `esbuild` identifier changes across Roo Code versions.
+- Ripgrep Self-Healing Contract: Locates `rg.exe` inside the VS Code installation tree and idempotently copies it into `node_modules\@vscode\ripgrep\bin\rg.exe` and `node_modules.asar.unpacked\@vscode\ripgrep\bin\rg.exe` across all `<commit-hash>\resources\app` folders.
+
+## 4. HARD CONSTRAINTS & ANTI-PATTERNS (DO NOT VIOLATE)
+- [CRITICAL]: Never bridge the `RULES` (`getRulesSection` / `oHt`) regex replacement across to `SYSTEM INFORMATION` (`RHt`); `esbuild` bundles 14.5 KB of `execa` (`$xu=wci()`) and OS-detection helpers between those two functions. Always anchor the end of the `RULES` regex strictly to its own closing `\$\{[A-Za-z0-9_$]+\?\.isStealthModel\?[A-Za-z0-9_$]+\(\):""\}`\}` brace.
+- [CRITICAL]: Never hardcode minified function names (such as `kHt`, `LHt`, `oHt`, `RHt`, `FHt`) in replacement patterns; always extract the identifier via named regex capture groups (`?<fn>`).
+- [CRITICAL]: Always read and write files using `.NET` UTF-8 without BOM (`[System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)` and `[System.IO.File]::WriteAllText($Path, $Content, (New-Object System.Text.UTF8Encoding($false)))`); never use bare `Get-Content` (which defaults to Windows-1252 in PowerShell 5.1) or `Set-Content -Encoding UTF8` (which injects a 3-byte BOM in PowerShell 5.1).
+- [CRITICAL]: Never use unanchored regexes to strip `${fn()}` template calls from the master prompt-assembly function (`aNs`), as doing so risks stripping active sections (`MARKDOWN RULES`) or mutating unrelated template literals.
+
+## 5. INTENTIONAL QUIRKS & FRAGILE ZONES
+- `patch-roocode.ps1 : Patch B (CAPABILITIES Nested Template Literal)`: `getCapabilitiesSection` contains a nested template literal for MCP server capabilities (`${e?`...`:""}`}`). Patch B anchors to `:""}`\}` so non-greedy matching never stops prematurely at the inner closing backtick.
+- `patch-roocode.ps1 : Patch D & Patch E (POSIX Workspace Path Formatting)`: Preserves `${$CwdExpr}` (`t.toPosix()`) in both `SYSTEM INFORMATION` and `RULES` so Windows backslashes are normalized to POSIX forward slashes (`c:/Users/...`).
+
+## 6. ACTIVE TECH DEBT / NEXT PHASE HOOKS
+- Monitor upstream `RooVetGit/Roo-Code` for native implementation of `conciseSystemPrompt` ("Power Mode") and fallback `rg.exe` discovery across VS Code commit-hash directories.
